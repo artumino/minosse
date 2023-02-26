@@ -76,6 +76,7 @@
             Languages='1033'
             Compressed='yes'
             InstallScope='perMachine'
+            InstallPrivileges='elevated'
             SummaryCodepage='1252'
             />
 
@@ -122,20 +123,30 @@
                                 DiskId='1'
                                 Source='$(var.CargoTargetBinDir)\minosse.exe'
                                 KeyPath='yes'/>
+                                <ServiceInstall Id="ServiceInstaller"
+                                                Type="ownProcess"
+                                                Name="Minosse - Process Monitor Service"
+                                                DisplayName="Minosse - Process Monitor Service"
+                                                Description="Monitoring process that sets process affinities and priorities based on user-defined rules"
+                                                Start="auto"
+                                                Account="LocalSystem"
+                                                ErrorControl="normal"
+                                                Arguments='run "[APPLICATIONFOLDER]rules.json"' />
+
+                                <ServiceControl Id="StartService"
+                                                Name="Minosse - Process Monitor Service"
+                                                Start="install"
+                                                Wait="no" />
+                                <ServiceControl Id="StopService"
+                                                Name="Minosse - Process Monitor Service"
+                                                Stop="uninstall"
+                                                Remove="uninstall"
+                                                Wait="yes" />
                         </Component>
                     </Directory>
                 </Directory>
             </Directory>
         </Directory>
-
-
-        <InstallExecuteSequence>
-          <Custom Action="InstallService" Before="InstallFinalize">(NOT Installed) AND (NOT REMOVE)</Custom>
-          <Custom Action="UninstallService" After="InstallInitialize">(NOT UPGRADINGPRODUCTCODE) AND (REMOVE="ALL")</Custom>
-        </InstallExecuteSequence>
-
-        <CustomAction Id="InstallService" Return="check" Impersonate="no" Execute="deferred" Directory="APPLICATIONFOLDER"  ExeCommand='"[APPLICATIONFOLDER]minosse.exe" install'/>
-        <CustomAction Id="UninstallService" Return="check" Impersonate="no" Execute="deferred" Directory="APPLICATIONFOLDER" ExeCommand='"[APPLICATIONFOLDER]minosse.exe" uninstall'/>
 
         <Feature
             Id='Binaries'
