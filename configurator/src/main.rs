@@ -1,7 +1,12 @@
 use std::path::{PathBuf, Path};
 
 use common::ProcessRuleSet;
-use iced::{window, Settings, Application, Theme, Command};
+use iced::{window, Settings, Application, Theme, Command, Length};
+use iced::widget::{
+    self, button, checkbox, column, container, row, scrollable, text,
+    text_input, Text,
+};
+use iced::alignment::{self, Alignment};
 
 enum MinosseConfigurator {
     Loading,
@@ -23,8 +28,7 @@ struct SavedState {
 #[derive(Debug, Clone)]
 enum Message {
     Loaded(Result<SavedState, LoadError>),
-    Saved(Result<(), SaveError>),
-    ToggleFullscreen(window::Mode),
+    Saved(Result<(), SaveError>)
 }
 
 
@@ -61,7 +65,7 @@ impl Application for MinosseConfigurator {
     }
 
     fn title(&self) -> String {
-        "Test Title".into()
+        "Minosse Configurator".into()
     }
 
     fn update(&mut self, message: Message) -> iced::Command<Message> {
@@ -91,9 +95,6 @@ impl Application for MinosseConfigurator {
 
                         Command::none()
                     },
-                    Message::ToggleFullscreen(mode) => {
-                        window::change_mode(mode)
-                    },
                     _ => Command::none()
                 };
 
@@ -119,8 +120,39 @@ impl Application for MinosseConfigurator {
         }
     }
 
-    fn view(&self) -> iced::Element<'_, Self::Message, iced::Renderer<Self::Theme>> {
-        todo!()
+    fn view(&self) -> iced::Element<Message> {
+        match self {
+            Self::Loading => self.view_loading(),
+            Self::Loaded(state) => self.view_loaded(state)
+        }
+    }
+}
+
+impl MinosseConfigurator {
+    fn view_loading(&self) -> iced::Element<Message> {
+        container(
+            text("Loading saved rules...")
+                        .horizontal_alignment(alignment::Horizontal::Center)
+                        .size(50),
+        )
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .center_y()
+        .center_x()
+        .into()
+    }
+    
+    fn view_loaded(&self, state: &State) -> iced::Element<Message> {
+        container(
+            text(format!("Loaded {} rules", state.rule_set.rules.len()))
+                        .horizontal_alignment(alignment::Horizontal::Center)
+                        .size(50),
+        )
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .center_y()
+        .center_x()
+        .into()
     }
 }
 
@@ -166,9 +198,15 @@ impl SavedState {
         let save_file = Self::get_path().ok()
                                         .unwrap_or(Path::new("rules.json").to_path_buf());
 
-        let file = std::fs::File::create(save_file).unwrap();
-        let writer = std::io::BufWriter::new(file);
-        serde_json::to_writer_pretty(writer, &self.rule_set).unwrap();
+        let writer = match std::fs::File::create(save_file).ok()
+                                                .map(std::io::BufWriter::new) {
+            Some(writer) => writer,
+            None => return Err(SaveError)
+        };
+
+        if serde_json::to_writer_pretty(writer, &self.rule_set).is_err() {
+            return Err(SaveError);
+        }
         
         Ok(())
     }
