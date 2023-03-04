@@ -1,10 +1,10 @@
 use regex::Regex;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "winapi")]
 use windows::Win32::System::Threading::{PROCESS_CREATION_FLAGS, REALTIME_PRIORITY_CLASS, HIGH_PRIORITY_CLASS, ABOVE_NORMAL_PRIORITY_CLASS, NORMAL_PRIORITY_CLASS, BELOW_NORMAL_PRIORITY_CLASS, IDLE_PRIORITY_CLASS};
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ProcessRule {
     #[serde(with = "serde_regex")]
     pub pattern: Regex,
@@ -12,7 +12,7 @@ pub struct ProcessRule {
     pub core_affinity: Option<Vec<usize>>
 }
 
-#[derive(Deserialize, Debug, Clone, Copy)]
+#[derive(Deserialize, Serialize, Debug, Clone, Copy)]
 #[serde(rename_all = "lowercase")]
 pub enum ProcessPriority {
     Realtime,
@@ -23,7 +23,7 @@ pub enum ProcessPriority {
     Low
 }
 
-#[derive(Deserialize, Debug, Default, Clone)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct ProcessRuleSet {
     pub rules: Vec<ProcessRule>
 }
