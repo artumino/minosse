@@ -143,6 +143,14 @@
                                                 Remove="uninstall"
                                                 Wait="yes" />
                         </Component>
+                        <Component Id='binary1' Guid='*'>
+                            <File
+                                Id='exe1'
+                                Name='minosse-configurator.exe'
+                                DiskId='1'
+                                Source='$(var.CargoTargetBinDir)\minosse-configurator.exe'
+                                KeyPath='yes'/>
+                        </Component>
                     </Directory>
                 </Directory>
             </Directory>
@@ -164,6 +172,7 @@
             <ComponentRef Id='License'/>
             
             <ComponentRef Id='binary0'/>
+            <ComponentRef Id='binary1'/>
 
             <Feature
                 Id='Environment'

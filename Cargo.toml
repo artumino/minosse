@@ -1,14 +1,19 @@
-[package]
-name = "minosse"
-version = "0.1.0"
+[workspace]
+members = [
+    ".",
+    "service",
+    "configurator",
+    "common"
+]
+
+[workspace.package]
 edition = "2021"
 authors = ["Jacopo Libe <jacopo.libe@gmial.com>"]
 description = "A Windows service that monitors process and changes their affinity and priority based on user defined rules."
 license = "MIT"
 repository = "https://github.com/artumino/minosse"
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[dependencies]
+[workspace.dependencies]
 anyhow = "1.0.69"
 regex = "1.7.1"
 serde = { version = "1.0.152", features = ["derive"] }
@@ -19,6 +24,7 @@ tokio-stream = "0.1.12"
 windows = { version = "0.44.0", features = ["Win32_System_Threading", "Win32_Foundation"] }
 windows-service = "0.5.0"
 wmi = "0.11.4"
+iced = "0.8.0"
 
 [profile.release]
 opt-level = 'z'     # Optimize for size
@@ -26,3 +32,35 @@ lto = true          # Enable link-time optimization
 codegen-units = 1   # Reduce number of codegen units to increase optimizations
 panic = 'abort'     # Abort on panic
 strip = true        # Strip symbols from binary*
+
+# Ugly Bundle Package for cargo-wix
+[package]
+name = "minosse-bundle"
+version = "0.1.0"
+edition.workspace = true
+authors.workspace = true
+description.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "minosse"
+path = "service/src/main.rs"
+
+[[bin]]
+name = "minosse-configurator"
+path = "configurator/src/main.rs"
+
+[dependencies]
+common = { path = "common", features = ["winapi"] }
+anyhow.workspace = true
+regex.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde_regex.workspace = true
+tokio.workspace = true
+tokio-stream.workspace = true
+windows.workspace = true
+windows-service.workspace = true
+wmi.workspace = true
+iced.workspace = true

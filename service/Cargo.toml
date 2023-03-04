@@ -1,0 +1,23 @@
+[package]
+name = "minosse"
+version = "0.1.0"
+edition.workspace = true
+authors.workspace = true
+description.workspace = true
+license.workspace = true
+repository.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+common = { path = "../common", features = ["winapi"] }
+anyhow.workspace = true
+regex.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde_regex.workspace = true
+tokio.workspace = true
+tokio-stream.workspace = true
+windows.workspace = true
+windows-service.workspace = true
+wmi.workspace = true
