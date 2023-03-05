@@ -1,44 +1,24 @@
-use std::path::{PathBuf, Path};
-
-use common::ProcessRuleSet;
 use iced::{window, Settings, Application, Theme, Command, Length};
 use iced::widget::{
     self, button, checkbox, column, container, row, scrollable, text,
     text_input, Text,
 };
 use iced::alignment::{self, Alignment};
+use crate::state::*;
+use crate::rule::*;
+
+mod state;
+mod rule;
 
 enum MinosseConfigurator {
     Loading,
     Loaded(State)
 }
 
-#[derive(Debug, Default)]
-struct State {
-    rule_set: ProcessRuleSet,
-    dirty: bool,
-    saving: bool
-}
-
-#[derive(Debug, Default, Clone)]
-struct SavedState {
-    rule_set: ProcessRuleSet
-}
-
 #[derive(Debug, Clone)]
 enum Message {
     Loaded(Result<SavedState, LoadError>),
     Saved(Result<(), SaveError>)
-}
-
-
-#[derive(Debug, Clone)]
-struct SaveError;
-
-#[derive(Debug, Clone)]
-enum LoadError {
-    File,
-    Format
 }
 
 pub fn main() -> iced::Result {
@@ -73,10 +53,7 @@ impl Application for MinosseConfigurator {
             MinosseConfigurator::Loading => {
                 match message {
                     Message::Loaded(Ok(state)) => {
-                        *self = MinosseConfigurator::Loaded(State {
-                            rule_set: state.rule_set,
-                            ..Default::default()
-                        });
+                        *self = MinosseConfigurator::Loaded(state.into());
                     },
                     Message::Loaded(Err(_)) => {
                         *self = MinosseConfigurator::Loaded(Default::default());
@@ -153,69 +130,5 @@ impl MinosseConfigurator {
         .center_y()
         .center_x()
         .into()
-    }
-}
-
-impl SavedState {
-    fn get_path() -> anyhow::Result<std::path::PathBuf> {
-        let mut path = std::env::current_dir()?;
-        path.push("rules.json");
-
-        if path.exists() {
-            return Ok(path);
-        }
-
-        path.pop();
-        path.pop();
-        path.push("rules.json");
-
-        if path.exists() {
-            return Ok(path);
-        }
-
-        anyhow::bail!("Could not find rules.json")
-    }
-
-    async fn load() -> Result<Self, LoadError> {
-        let save_file = Self::get_path().ok()
-            .and_then(|path| std::fs::File::open(path).ok());
-
-        let save_file = match save_file {
-            Some(file) => file,
-            None => return Err(LoadError::File)
-        };
-
-        let reader = std::io::BufReader::new(save_file);
-        match serde_json::from_reader(reader) {
-            Ok(rule_set) => Ok(Self {
-                rule_set
-            }),
-            Err(_) => Err(LoadError::Format)
-        }
-    }
-
-    async fn save(self) -> Result<(), SaveError> {
-        let save_file = Self::get_path().ok()
-                                        .unwrap_or(Path::new("rules.json").to_path_buf());
-
-        let writer = match std::fs::File::create(save_file).ok()
-                                                .map(std::io::BufWriter::new) {
-            Some(writer) => writer,
-            None => return Err(SaveError)
-        };
-
-        if serde_json::to_writer_pretty(writer, &self.rule_set).is_err() {
-            return Err(SaveError);
-        }
-        
-        Ok(())
-    }
-}
-
-impl <'a> From<&'a mut State> for SavedState {
-    fn from(state: &'a mut State) -> Self {
-        Self {
-            rule_set: state.rule_set.clone()
-        }
     }
 }

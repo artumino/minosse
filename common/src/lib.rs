@@ -1,4 +1,3 @@
-use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "winapi")]
@@ -6,8 +5,7 @@ use windows::Win32::System::Threading::{PROCESS_CREATION_FLAGS, REALTIME_PRIORIT
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ProcessRule {
-    #[serde(with = "serde_regex")]
-    pub pattern: Regex,
+    pub pattern: String,
     pub priority: Option<ProcessPriority>,
     pub core_affinity: Option<Vec<usize>>
 }
@@ -26,6 +24,16 @@ pub enum ProcessPriority {
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct ProcessRuleSet {
     pub rules: Vec<ProcessRule>
+}
+
+impl Default for ProcessRule {
+    fn default() -> Self {
+        Self {
+            pattern: "\\w*".into(),
+            priority: None,
+            core_affinity: None
+        }
+    }
 }
 
 #[cfg(feature = "winapi")]

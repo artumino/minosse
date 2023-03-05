@@ -1,5 +1,8 @@
+use std::str::FromStr;
+
 use common::*;
 
+use regex::Regex;
 use serde::Deserialize;
 use tokio::sync::mpsc::UnboundedReceiver;
 use tokio_stream::StreamExt;
@@ -68,7 +71,8 @@ impl RuleApplier<ProcessInfo> for ProcessRuleSet {
 
 impl RuleApplier<ProcessInfo> for ProcessRule {
     fn apply(&self, process: &ProcessInfo) -> anyhow::Result<()> {
-        if self.pattern.is_match(&process.process_name) {
+        let rule_regex = Regex::from_str(self.pattern.as_str())?;
+        if rule_regex.is_match(&process.process_name) {
             let process_handle =
                 unsafe { OpenProcess(PROCESS_SET_INFORMATION, false, process.process_id) }?;
 
