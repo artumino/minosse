@@ -18,6 +18,7 @@ enum MinosseConfigurator {
 #[derive(Debug, Clone)]
 enum Message {
     Loaded(Result<SavedState, LoadError>),
+    RuleWidgetMessage(usize, RuleWidgetMessage),
     Saved(Result<(), SaveError>)
 }
 
@@ -72,6 +73,15 @@ impl Application for MinosseConfigurator {
 
                         Command::none()
                     },
+                    Message::RuleWidgetMessage(i, rule_widget_message) => {
+                        if let Some(widget) = state.rule_set.get_mut(i) {
+                            widget.update(rule_widget_message);   
+                        }
+                        
+                        //TODO: Check Outer Messages
+                        
+                        Command::none()
+                    },
                     _ => Command::none()
                 };
 
@@ -100,7 +110,10 @@ impl Application for MinosseConfigurator {
     fn view(&self) -> iced::Element<Message> {
         match self {
             Self::Loading => self.view_loading(),
-            Self::Loaded(state) => self.view_loaded(state)
+            Self::Loaded(State {
+                rule_set,
+                ..
+            }) => self.view_loaded(rule_set)
         }
     }
 }
@@ -119,16 +132,35 @@ impl MinosseConfigurator {
         .into()
     }
     
-    fn view_loaded(&self, state: &State) -> iced::Element<Message> {
-        container(
-            text(format!("Loaded {} rules", state.rule_set.rules.len()))
-                        .horizontal_alignment(alignment::Horizontal::Center)
-                        .size(50),
+    fn view_loaded<'a>(&'a self, rule_set: &'a Vec<RuleWidget>) -> iced::Element<Message> {
+        let rule_widgets: iced::Element<_> = column(
+            rule_set.iter()
+            .enumerate()
+            .map(|(idx, rule_widget)| 
+                rule_widget.view(idx).map(move |message|
+                    Message::RuleWidgetMessage(idx, message)
+                )
+            )
+            .collect()
         )
         .width(Length::Fill)
-        .height(Length::Fill)
-        .center_y()
-        .center_x()
+        .align_items(Alignment::Center)
+        .spacing(10)
+        .padding(10)
+        .into();
+          
+        let header = text(format!("Loaded {} rules", rule_set.len()))
+                        .horizontal_alignment(alignment::Horizontal::Center)
+                        .width(Length::Fill)
+                        .size(50);
+        let content = column![header, rule_widgets]
+                .spacing(20);
+                
+        scrollable(
+            container(content)
+            .width(Length::Fill)
+            .center_x()
+        )
         .into()
     }
 }

@@ -1,9 +1,11 @@
 use common::ProcessRuleSet;
-use std::path::{PathBuf, Path};
+use std::path::Path;
+
+use crate::rule::RuleWidget;
 
 #[derive(Debug, Default)]
 pub(crate) struct State {
-    pub rule_set: ProcessRuleSet,
+    pub rule_set: Vec<RuleWidget>,
     pub dirty: bool,
     pub saving: bool
 }
@@ -82,7 +84,9 @@ impl SavedState {
 impl <'a> From<&'a mut State> for SavedState {
     fn from(state: &'a mut State) -> Self {
         Self {
-            rule_set: state.rule_set.clone()
+            rule_set: ProcessRuleSet {
+                rules: state.rule_set.iter().map(|rule_widget| rule_widget.process_rule.clone()).collect()
+            } 
         }
     }
 }
@@ -90,7 +94,7 @@ impl <'a> From<&'a mut State> for SavedState {
 impl From<SavedState> for State {
     fn from(saved_state: SavedState) -> Self {
         State {
-            rule_set: saved_state.rule_set,
+            rule_set: saved_state.rule_set.rules.into_iter().map(RuleWidget::new).collect(),
             ..Default::default()
         }
     }
