@@ -1,166 +1,112 @@
-use iced::{window, Settings, Application, Theme, Command, Length};
-use iced::widget::{
-    self, button, checkbox, column, container, row, scrollable, text,
-    text_input, Text,
-};
-use iced::alignment::{self, Alignment};
-use crate::state::*;
-use crate::rule::*;
-
+use crate::state::SavedState;
+use crate::rule_list::rule_list;
+use dioxus::prelude::*;
 mod state;
 mod rule;
+mod rule_list;
+mod process_affinity;
 
-enum MinosseConfigurator {
-    Loading,
-    Loaded(State)
-}
+fn app(cx: Scope) -> Element {
+    let saved_state_loading = use_future(cx, (), |_| async move { SavedState::load().await });
 
-#[derive(Debug, Clone)]
-enum Message {
-    Loaded(Result<SavedState, LoadError>),
-    RuleWidgetMessage(usize, RuleWidgetMessage),
-    Saved(Result<(), SaveError>)
-}
+    let loading_finished = saved_state_loading.value().is_some();
+    let rule_set = use_state(cx, || None);
+    if let (None, Some(Ok(saved_state))) = (rule_set.get(), saved_state_loading.value()) {
+        rule_set.set(Some(saved_state.rule_set.clone()));
+    }
 
-pub fn main() -> iced::Result {
-    MinosseConfigurator::run(Settings {
-        window: window::Settings {
-            size: (500, 800),
-            ..window::Settings::default()
-        },
-        ..Settings::default()
+    let is_dirty = use_state(cx, || false);
+
+    let creating_file = use_state(cx, || None);
+    let create_rule_file = move |_| {
+        creating_file.set(Some(false));
+        cx.spawn({
+            let creating_file = creating_file.to_owned();
+            async move {
+                let save_operation = SavedState::default().save().await;
+                creating_file.set(match save_operation.is_err() {
+                    true => None,
+                    false => Some(true),
+                });
+            }
+        });
+    };
+
+    let save_changes = move |_| {
+        let rule_set = rule_set.get().to_owned();
+        let is_dirty = is_dirty.to_owned();
+        cx.spawn(async move {
+            if let Some(rule_set) = rule_set {
+                    let save_operation = SavedState { rule_set }.save().await;
+                    if save_operation.is_ok() {
+                        is_dirty.set(false);
+                    }
+            }
+        });
+    };
+
+    let is_creating_file = creating_file.get();
+    if let Some(true) = is_creating_file {
+        println!("Restarting");
+        saved_state_loading.restart();
+        creating_file.set(None);
+    }
+
+    let add_rule = move |_| {
+        let mut rule_set = rule_set.make_mut();
+        if let Some(rule_set) = rule_set.as_mut() {
+            rule_set.rules.push(Default::default());
+            is_dirty.set(true);
+        }
+    };
+
+    cx.render(match (loading_finished, rule_set.get()) {
+        (false, None) => {
+            rsx!(h1 {"Loading..."})
+        }
+        (true, Some(rules)) => {
+            rsx! {
+                h1 {
+                    "align": "center",
+                    "Loaded"
+                },
+                rule_list { 
+                    rule_set: rules,
+                    on_change: move |changed_rule_set| {
+                        rule_set.set(Some(changed_rule_set));
+                        is_dirty.set(true);
+                    } 
+                },
+                button { 
+                    onclick: add_rule,
+                    "Add" 
+                },
+                if *is_dirty.get() {
+                    rsx! {
+                        button { onclick: save_changes, "Save" }
+                    }
+                }
+            }
+        }
+        _ => {
+            rsx! { p {
+                "align": "center",
+                 h1 { "color": "grey",
+                     "No rules file available" },
+                 if is_creating_file.is_none() {
+                     rsx!{
+                         button { onclick: create_rule_file,
+                                  "Create" }
+                     }
+                 }
+            }}
+        }
     })
 }
 
-impl Application for MinosseConfigurator {
-    type Message = Message;
-    type Theme = Theme;
-    type Executor = iced::executor::Default;
-    type Flags = ();
+fn main() {
+    #[cfg(debug_assertions)]
+    hot_reload_init!();
 
-    fn new(_: Self::Flags) -> (Self, iced::Command<Message>) {
-        (
-            MinosseConfigurator::Loading,
-            Command::perform(SavedState::load(), Message::Loaded)
-        )
-    }
-
-    fn title(&self) -> String {
-        "Minosse Configurator".into()
-    }
-
-    fn update(&mut self, message: Message) -> iced::Command<Message> {
-        match self {
-            MinosseConfigurator::Loading => {
-                match message {
-                    Message::Loaded(Ok(state)) => {
-                        *self = MinosseConfigurator::Loaded(state.into());
-                    },
-                    Message::Loaded(Err(_)) => {
-                        *self = MinosseConfigurator::Loaded(Default::default());
-                    },
-                    _ => {}
-                }
-
-                Command::none()
-            },
-            MinosseConfigurator::Loaded(state) => {
-                let mut saved = false;
-                let command = match message {
-                    Message::Saved(_) => {
-                        state.saving = false;
-                        saved = true;
-
-                        Command::none()
-                    },
-                    Message::RuleWidgetMessage(i, rule_widget_message) => {
-                        if let Some(widget) = state.rule_set.get_mut(i) {
-                            widget.update(rule_widget_message);   
-                        }
-                        
-                        //TODO: Check Outer Messages
-                        
-                        Command::none()
-                    },
-                    _ => Command::none()
-                };
-
-                if !saved {
-                    state.dirty = true;
-                }
-
-                let save = if state.dirty && !state.saving {
-                    state.dirty = false;
-                    state.saving = true;
-
-                    let save_state: SavedState = state.into();
-                    Command::perform(
-                        save_state.save(),
-                        Message::Saved,
-                    )
-                } else {
-                    Command::none()
-                };
-
-                Command::batch(vec![command, save])
-            }
-        }
-    }
-
-    fn view(&self) -> iced::Element<Message> {
-        match self {
-            Self::Loading => self.view_loading(),
-            Self::Loaded(State {
-                rule_set,
-                ..
-            }) => self.view_loaded(rule_set)
-        }
-    }
-}
-
-impl MinosseConfigurator {
-    fn view_loading(&self) -> iced::Element<Message> {
-        container(
-            text("Loading saved rules...")
-                        .horizontal_alignment(alignment::Horizontal::Center)
-                        .size(50),
-        )
-        .width(Length::Fill)
-        .height(Length::Fill)
-        .center_y()
-        .center_x()
-        .into()
-    }
-    
-    fn view_loaded<'a>(&'a self, rule_set: &'a Vec<RuleWidget>) -> iced::Element<Message> {
-        let rule_widgets: iced::Element<_> = column(
-            rule_set.iter()
-            .enumerate()
-            .map(|(idx, rule_widget)| 
-                rule_widget.view(idx).map(move |message|
-                    Message::RuleWidgetMessage(idx, message)
-                )
-            )
-            .collect()
-        )
-        .width(Length::Fill)
-        .align_items(Alignment::Center)
-        .spacing(10)
-        .padding(10)
-        .into();
-          
-        let header = text(format!("Loaded {} rules", rule_set.len()))
-                        .horizontal_alignment(alignment::Horizontal::Center)
-                        .width(Length::Fill)
-                        .size(50);
-        let content = column![header, rule_widgets]
-                .spacing(20);
-                
-        scrollable(
-            container(content)
-            .width(Length::Fill)
-            .center_x()
-        )
-        .into()
-    }
+    dioxus_desktop::launch(app);
 }

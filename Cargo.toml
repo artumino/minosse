@@ -8,7 +8,7 @@ members = [
 
 [workspace.package]
 edition = "2021"
-authors = ["Jacopo Libe <jacopo.libe@gmial.com>"]
+authors = ["Jacopo Libe <jacopo.libe@gmail.com>"]
 description = "A Windows service that monitors process and changes their affinity and priority based on user defined rules."
 license = "MIT"
 repository = "https://github.com/artumino/minosse"
@@ -24,8 +24,10 @@ tokio-stream = "0.1.12"
 windows = { version = "0.44.0", features = ["Win32_System_Threading", "Win32_Foundation"] }
 windows-service = "0.5.0"
 wmi = "0.11.4"
-iced = "0.8.0"
+dioxus = { git = "https://github.com/DioxusLabs/dioxus.git" }
+dioxus-desktop = { git = "https://github.com/DioxusLabs/dioxus.git" }
 sys-info = "0.9.1"
+strum = { version = "0.24", features = ["derive"] }
 
 [profile.release]
 opt-level = 'z'     # Optimize for size
@@ -64,5 +66,7 @@ tokio-stream.workspace = true
 windows.workspace = true
 windows-service.workspace = true
 wmi.workspace = true
-iced.workspace = true
 sys-info.workspace = true
+dioxus.workspace = true
+dioxus-desktop.workspace = true
+strum.workspace = true

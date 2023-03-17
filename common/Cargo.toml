@@ -17,3 +17,4 @@ serde.workspace = true
 serde_json.workspace = true
 serde_regex.workspace = true
 windows = { workspace = true, optional = true }
+strum.workspace = true

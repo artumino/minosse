@@ -1,20 +1,11 @@
 use common::ProcessRuleSet;
+use dioxus::prelude::Props;
 use std::path::Path;
 
-use crate::rule::RuleWidget;
-
-#[derive(Debug, Default)]
-pub(crate) struct State {
-    pub rule_set: Vec<RuleWidget>,
-    pub dirty: bool,
-    pub saving: bool
-}
-
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, PartialEq, Props)]
 pub(crate) struct SavedState {
-    rule_set: ProcessRuleSet
+    pub rule_set: ProcessRuleSet
 }
-
 
 #[derive(Debug, Clone)]
 pub(crate) struct SaveError;
@@ -78,24 +69,5 @@ impl SavedState {
         }
         
         Ok(())
-    }
-}
-
-impl <'a> From<&'a mut State> for SavedState {
-    fn from(state: &'a mut State) -> Self {
-        Self {
-            rule_set: ProcessRuleSet {
-                rules: state.rule_set.iter().map(|rule_widget| rule_widget.process_rule.clone()).collect()
-            } 
-        }
-    }
-}
-
-impl From<SavedState> for State {
-    fn from(saved_state: SavedState) -> Self {
-        State {
-            rule_set: saved_state.rule_set.rules.into_iter().map(RuleWidget::new).collect(),
-            ..Default::default()
-        }
     }
 }
